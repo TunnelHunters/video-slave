@@ -3,8 +3,8 @@ from socket import socket, error
 from time import sleep
 
 # constants for video stuff
-width = 1280
-height = 720
+width = 854
+height = 480
 framerate = 32
 
 # constants/variables for connection stuff
