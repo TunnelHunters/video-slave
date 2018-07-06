@@ -1,36 +1,40 @@
+import atexit
+from os import unlink, path
 from socket import socket, AF_UNIX, SOCK_STREAM, error
-from time import sleep
 from picamera import PiCamera
 
 # constants for video stuff
 width = 854
 height = 480
 framerate = 32
-
-# constants/variables for connection stuff
-# HOST = environ['THZ_serverURL']
+# path to unix socket
 socket_path = '/tmp/THZ_video.sock'
-connected = False
 
-# socket to thing we're sending video shit to
-client_socket = socket(AF_UNIX, SOCK_STREAM)
-# retry connection every 5 seconds until success
-while not connected:
-    try:
-        client_socket.connect(socket_path)
-        connected = True
-    except error:
-        print 'Connection to {} failed, trying again in 5 seconds.'.format(socket_path)
-        sleep(5)
 
-# this gets passed to the video function to be used as the destination for the stream
-connection = client_socket.makefile('wb')
-print 'Connected to master process!'
+@atexit.register
+def goodbye():
+    # delete socket node on exit
+    unlink(socket_path)
+    print 'deleted {}'.format(socket_path)
 
+if path.exists(socket_path):
+    unlink(socket_path)
+
+# makest, bindest, and listenest on thine socket
+sock = socket(AF_UNIX, SOCK_STREAM)
+sock.bind(socket_path)
+sock.listen(1)
+print 'listening at {}'.format(socket_path)
+
+# accept a connection
+client, client_address = sock.accept()
+print 'connection from {}!!'.format(client_address)
+
+# PiCamera stuff
 with PiCamera() as camera:
     camera.resolution = (width, height)
     camera.framerate = framerate
-    camera.start_recording(connection, format='mjpeg')
+    camera.start_recording(client.makefile(), format='mjpeg')
     # TODO: How do I record forever?
     camera.wait_recording(60)
     camera.stop_recording()
