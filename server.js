@@ -27,9 +27,7 @@ function processFrameData(data) {
 
 function emitFrame(frame) {
 	console.log(
-		frame.length,
-		frame.indexOf(Buffer.from([0xFF, 0xD8])),
-		frame.indexOf(endOfFrame)
+		frame.length
 	);
 }
 

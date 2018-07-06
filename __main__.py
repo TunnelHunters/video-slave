@@ -1,6 +1,7 @@
-from picamera import PiCamera
+from os import environ
 from socket import socket, error
 from time import sleep
+from picamera import PiCamera
 
 # constants for video stuff
 width = 854
@@ -8,6 +9,7 @@ height = 480
 framerate = 32
 
 # constants/variables for connection stuff
+# HOST = environ['THZ_serverURL']
 HOST = 'localhost'
 PORT = 8082
 connected = False
