@@ -1,5 +1,4 @@
-from os import environ
-from socket import socket, error
+from socket import socket, AF_UNIX, SOCK_STREAM, error
 from time import sleep
 from picamera import PiCamera
 
@@ -10,19 +9,18 @@ framerate = 32
 
 # constants/variables for connection stuff
 # HOST = environ['THZ_serverURL']
-HOST = 'localhost'
-PORT = 8082
+socket_path = '/tmp/THZ_video.sock'
 connected = False
 
 # socket to thing we're sending video shit to
-client_socket = socket()
+client_socket = socket(AF_UNIX, SOCK_STREAM)
 # retry connection every 5 seconds until success
 while not connected:
     try:
-        client_socket.connect((HOST, PORT))
+        client_socket.connect(socket_path)
         connected = True
     except error:
-        print 'Connection to {}:{} failed, trying again in 5 seconds.'.format(HOST, PORT)
+        print 'Connection to {} failed, trying again in 5 seconds.'.format(socket_path)
         sleep(5)
 
 # this gets passed to the video function to be used as the destination for the stream
