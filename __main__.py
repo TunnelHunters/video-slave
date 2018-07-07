@@ -1,6 +1,6 @@
 import atexit
 from os import unlink, path
-from socket import socket, AF_UNIX, SOCK_STREAM, error
+from socket import socket, AF_UNIX, SOCK_STREAM
 from picamera import PiCamera
 
 # constants for video stuff
@@ -12,32 +12,39 @@ socket_path = '/tmp/THZ_video.sock'
 
 
 @atexit.register
-def goodbye():
-    # delete socket node on exit
-    unlink(socket_path)
-    print 'deleted {}'.format(socket_path)
+def on_exit():
+    try:
+        client_fd.close()
+        client.close()
+    except NameError:
+        pass
 
-if path.exists(socket_path):
-    unlink(socket_path)
+    delete_socket()
+    print 'goodbye!!'
 
-# makest, bindest, and listenest on thine socket
-sock = socket(AF_UNIX, SOCK_STREAM)
-sock.bind(socket_path)
-sock.listen(1)
-print 'listening at {}'.format(socket_path)
 
-# accept a connection
-client, client_address = sock.accept()
-print 'connection from {}!!'.format(client_address)
+def delete_socket():
+    if path.exists(socket_path):
+        unlink(socket_path)
 
-# PiCamera stuff
-with PiCamera() as camera:
-    camera.resolution = (width, height)
-    camera.framerate = framerate
-    camera.start_recording(client.makefile(), format='mjpeg')
-    # TODO: How do I record forever?
-    camera.wait_recording(60)
-    camera.stop_recording()
+if __name__ == '__main__':
+    delete_socket()
+    # make & bind socket then listen for connections
+    sock = socket(AF_UNIX, SOCK_STREAM)
+    sock.bind(socket_path)
+    sock.listen(1)
+    print 'listening at {}'.format(socket_path)
 
-connection.close()
-client_socket.close()
+    # accept a connection
+    client, _ = sock.accept()
+    client_fd = client.makefile()
+    print 'somebody connected!!'
+
+    # PiCamera stuff
+    with PiCamera() as camera:
+        camera.resolution = (width, height)
+        camera.framerate = framerate
+        camera.start_recording(client_fd, format='mjpeg')
+        # TODO: How do I record forever?
+        camera.wait_recording(60)
+        camera.stop_recording()
