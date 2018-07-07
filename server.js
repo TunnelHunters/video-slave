@@ -2,11 +2,10 @@ const net = require('net');
 const fs = require('fs');
 
 const endOfFrame = Buffer.from([0xFF, 0xD9]);
+const socket_path = '/tmp/THZ_video.sock';
 
-const server = net.createServer(socket => {
-	console.log('somebody connected!');
-	socket.on('data', processFrameData);
-});
+const socket = net.createConnection(socket_path, () => console.log('connected to video slave'));
+socket.on('data', processFrameData);
 
 let accumulator = Buffer.alloc(0);
 function processFrameData(data) {
@@ -26,9 +25,5 @@ function processFrameData(data) {
 }
 
 function emitFrame(frame) {
-	console.log(
-		frame.length
-	);
+	console.log(frame.length);
 }
-
-server.listen(8082, () => console.log('listening'));
