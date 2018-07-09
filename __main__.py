@@ -1,6 +1,6 @@
 import atexit
 from os import environ
-from socket import socket, AF_UNIX, SOCK_STREAM, error
+from socket import socket as _socket, AF_UNIX, SOCK_STREAM, error
 from time import sleep
 from picamera import PiCamera
 
@@ -17,25 +17,25 @@ connected = False
 def on_exit():
     try:
         sock_fd.close()
-        sock.close()
+        socket.close()
     except NameError:
         pass
 
     print 'Goodbye!!'
 
 # socket we send frames through
-sock = socket(AF_UNIX, SOCK_STREAM)
+socket = _socket(AF_UNIX, SOCK_STREAM)
 # retry connection every 5 seconds until success
 while not connected:
     try:
-        sock.connect(socket_path)
+        socket.connect(socket_path)
         connected = True
     except error:
         print 'Connection to {} failed, trying again in 5 seconds.'.format(socket_path)
         sleep(5)
 
 print 'Connected to {}!'.format(socket_path)
-sock_fd = sock.makefile()
+sock_fd = socket.makefile()
 
 # PiCamera stuff
 with PiCamera() as camera:
