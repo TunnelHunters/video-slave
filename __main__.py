@@ -1,47 +1,49 @@
-import atexit
-from os import environ
-from socket import socket as _socket, AF_UNIX, SOCK_STREAM, error
-from time import sleep
-from picamera import PiCamera
+import logging
+from socketIO_client_nexus import SocketIO, BaseNamespace
+from lib.VideoThread import VideoThread
 
-# constants for video stuff
-width = 854
-height = 480
-framerate = 32
-# path to unix socket
-socket_path = environ['THZ_videoSocket']
-connected = False
+logger = logging.getLogger('socketIO-client')
+logger.setLevel(logging.DEBUG)
+logging.basicConfig()
+
+HOST = 'localhost'
+PORT = 8000
+
+"""
+THE PLAN:
+Socket.io connection to webserver
+--- wait ---
+Webserver: LET'S GO DADDY
+Videoslav: OK YEAH
+<-- HTTP request ---
+<-- start streaming boi ---
+Webserver: OK STOP PLS
+Videoslav: YOU GOT IT
+*** Stop streaming & close HTTP req? ***
+"""
 
 
-@atexit.register
-def on_exit():
-    try:
-        sock_fd.close()
-        socket.close()
-    except NameError:
-        pass
+class ControlNamespace(BaseNamespace):
+    video_thread = None
 
-    print 'Goodbye!!'
+    def on_connect(self):
+        logger.debug('socket.io connected to server!!')
 
-# socket we send frames through
-socket = _socket(AF_UNIX, SOCK_STREAM)
-# retry connection every 5 seconds until success
-while not connected:
-    try:
-        socket.connect(socket_path)
-        connected = True
-    except error:
-        print 'Connection to {} failed, trying again in 5 seconds.'.format(socket_path)
-        sleep(5)
+    def on_start_video(self):
+        if self.video_thread is not None:
+            raise Exception('video thread already running')
 
-print 'Connected to {}!'.format(socket_path)
-sock_fd = socket.makefile()
+        logger.debug('starting video thread')
+        self.video_thread = VideoThread()
+        self.video_thread.start()
 
-# PiCamera stuff
-with PiCamera() as camera:
-    camera.resolution = (width, height)
-    camera.framerate = framerate
-    camera.start_recording(sock_fd, format='mjpeg')
-    # TODO: How do I record forever?
-    camera.wait_recording(60)
-    camera.stop_recording()
+    def on_stop_video(self):
+        logger.debug('stopping video thread')
+        # block until thread is stopped+
+        self.video_thread.stop()
+        logger.debug('video thread stopped!')
+        self.video_thread = None
+
+io = SocketIO(HOST, PORT)
+io.define(ControlNamespace, '/robot')
+io.wait()
